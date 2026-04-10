@@ -1,153 +1,166 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Radio, Square, Play, ShieldAlert, Wifi, Info } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Israel News Radio</title>
 
-const App = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentStation, setCurrentStation] = useState(null);
-  const [status, setStatus] = useState('בחר תחנה'); 
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(false);
-  const audioRef = useRef(null);
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
 
-  const stations = [
-    { id: 1, name: 'גלי ישראל', url: 'https://glv.stream-line.co/gly8s', freq: '94.0 FM' },
-    { id: 2, name: 'ערוץ 14', url: 'https://mid-live.stream-line.co/c14_radio', freq: 'רדיו 14' },
-    { id: 3, name: '103FM', url: 'https://103fm.stream-line.co/103fm_mp3', freq: 'רדיו ללא הפסקה' },
-    { id: 4, name: 'רשת ב', url: 'https://kanliveic.media.kan.org.il/kan/bet/icecast.audio', freq: 'כאן חדשות' }
-  ];
+h1 {
+    margin-bottom: 20px;
+}
 
-  const playStation = (station) => {
-    if (currentStation?.id === station.id && isPlaying) {
-      stopRadio();
-      return;
-    }
+button {
+    display: block;
+    width: 90%;
+    margin: 10px auto;
+    padding: 15px;
+    font-size: 18px;
+    border: none;
+    border-radius: 10px;
+    background: #333;
+    color: white;
+}
 
-    setError(false);
-    setIsLoading(true);
-    setCurrentStation(station);
-    setStatus('מתחבר...'); 
-    
-    if (audioRef.current) {
-      audioRef.current.src = station.url;
-      audioRef.current.play()
-        .then(() => {
-          setIsPlaying(true);
-          setIsLoading(false);
-          setStatus('מנגן עכשיו');
-        })
-        .catch((err) => {
-          setError(true);
-          setIsLoading(false);
-          setStatus('שגיאת חיבור');
-          setIsPlaying(false);
-        });
-    }
-  };
+button.active {
+    background: #00aaff;
+}
 
-  const stopRadio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-    }
-    setIsPlaying(false);
-    setIsLoading(false);
-    setCurrentStation(null);
-    setStatus('בחר תחנה');
-    setError(false);
-  };
+audio {
+    width: 100%;
+    margin-top: 20px;
+}
+</style>
+</head>
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === '0') stopRadio();
-      const station = stations.find(s => s.id.toString() === e.key);
-      if (station) playStation(station);
-    };
+<body>
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStation, isPlaying]);
+<h1>📻 Israel News Radio</h1>
+<p id="status">Checking schedule...</p>
 
-  return (
-    <div className="min-h-screen bg-stone-950 text-white flex flex-col items-center p-4 font-sans select-none" dir="rtl">
-      
-      {/* Visual Indicator Top */}
-      <div className="w-full max-w-md flex flex-col items-center mt-6 mb-8">
-        <div className={`relative w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-500 shadow-2xl ${
-          error ? 'border-red-600 bg-red-900/20 shadow-red-900/40' : 
-          isPlaying ? 'border-emerald-500 bg-emerald-900/20 shadow-emerald-900/40' : 
-          isLoading ? 'border-yellow-500 bg-yellow-900/20 animate-pulse' :
-          'border-stone-800 bg-stone-900 shadow-black'
-        }`}>
-          {error ? <ShieldAlert size={48} className="text-red-500" /> : 
-           isPlaying ? <Wifi size={48} className="text-emerald-400" /> : 
-           <Radio size={48} className="text-stone-600" />}
-        </div>
-        <h1 className="text-lg font-bold mt-4 text-stone-500 tracking-widest uppercase">Israel Radio App</h1>
-      </div>
+<button onclick="playStation('galei')">Galei Israel</button>
+<button onclick="playStation('ch14')">Channel 14 Radio</button>
+<button onclick="playStation('fm103')">103FM</button>
+<button onclick="playStation('reshet')">Reshet Bet</button>
 
-      {/* Main Status Display */}
-      <div className={`w-full max-w-xs p-5 rounded-3xl border-2 mb-8 text-center transition-all duration-300 ${
-        error ? 'border-red-900 bg-red-950/30' : 
-        isPlaying ? 'border-emerald-900 bg-emerald-950/30' : 
-        'border-stone-800 bg-stone-900'
-      }`}>
-        <h2 className={`text-3xl font-black mb-1 ${
-          error ? 'text-red-500' : isPlaying ? 'text-emerald-400' : 'text-stone-200'
-        }`}>
-          {status}
-        </h2>
-        <div className="text-stone-400 text-sm flex items-center justify-center gap-2">
-          {currentStation ? (
-            <span className="font-bold text-stone-300">{currentStation.name}</span>
-          ) : (
-            <span className="flex items-center gap-1 opacity-50"><Info size={14}/> בחר מספר 1-4</span>
-          )}
-        </div>
-      </div>
+<audio id="player" controls autoplay></audio>
 
-      {/* Grid of Stations */}
-      <div className="w-full max-w-xs space-y-3">
-        {stations.map((station) => (
-          <button
-            key={station.id}
-            onClick={() => playStation(station)}
-            className={`w-full flex items-center justify-between p-5 rounded-2xl font-bold text-xl transition-all active:scale-95 border-b-4 ${
-              currentStation?.id === station.id && isPlaying
-                ? 'bg-emerald-600 border-emerald-800 text-white translate-y-1'
-                : 'bg-stone-800 border-stone-900 text-stone-200 hover:bg-stone-700'
-            }`}
-          >
-            <div className="flex flex-col items-start">
-              <span className="leading-tight">{station.name}</span>
-              <span className="text-xs font-normal opacity-60">{station.freq}</span>
-            </div>
-            <div className="flex items-center gap-4">
-               <span className="text-sm bg-black/40 px-3 py-1 rounded-lg border border-white/10">{station.id}</span>
-               {currentStation?.id === station.id && isPlaying ? 
-                <Square size={22} fill="white" className="animate-pulse" /> : 
-                <Play size={22} fill="currentColor" />}
-            </div>
-          </button>
-        ))}
-
-        {/* Stop Button */}
-        <button
-          onClick={stopRadio}
-          className="w-full mt-4 flex items-center justify-center gap-4 p-5 rounded-2xl font-bold text-xl bg-red-950/40 text-red-400 border-2 border-red-900/50 active:scale-95 transition-all"
-        >
-          <span>כיבוי</span>
-          <span className="bg-red-900/30 px-3 py-1 rounded-lg border border-red-700/50 text-sm">0</span>
-        </button>
-      </div>
-
-      {/* Device Info Footer */}
-      <div className="mt-auto py-6 text-stone-700 text-[10px] text-center uppercase tracking-tighter">
-        Optimized for Duoqin F22 Pro Keypad
-      </div>
-
-      <audio ref={audioRef} />
-    </div>
-  );
+<script>
+// 🔊 STREAM URLS (REPLACE THESE)
+const stations = {
+    galei: "STREAM_URL_1",
+    ch14: "STREAM_URL_2",
+    fm103: "STREAM_URL_3",
+    reshet: "STREAM_URL_4"
 };
 
-export default App;
+let currentStation = null;
+let retryCount = 0;
+const maxRetries = 10;
+
+// 🕒 NEWS SCHEDULE
+function getNewsStation(hour, minute) {
+    if (minute < 10) return "reshet";
+    if (hour >= 7 && hour <= 9) return "galei";
+    if (hour >= 12 && hour <= 14) return "fm103";
+    if (hour >= 18 && hour <= 20) return "ch14";
+    return "reshet";
+}
+
+// ▶️ PLAY STATION
+function playStation(key) {
+    currentStation = key;
+    retryCount = 0;
+
+    const player = document.getElementById("player");
+    player.src = stations[key];
+    player.play().catch(() => {});
+
+    updateUI(key);
+}
+
+// 🎨 UI UPDATE
+function updateUI(key) {
+    document.querySelectorAll("button").forEach(btn => btn.classList.remove("active"));
+
+    const buttons = document.querySelectorAll("button");
+    buttons.forEach(btn => {
+        if (btn.innerText.toLowerCase().includes(key)) {
+            btn.classList.add("active");
+        }
+    });
+
+    document.getElementById("status").innerText = "Playing: " + key;
+}
+
+// 🔁 AUTO RECONNECT
+function setupAutoReconnect() {
+    const player = document.getElementById("player");
+
+    player.addEventListener("error", tryReconnect);
+    player.addEventListener("stalled", tryReconnect);
+    player.addEventListener("waiting", tryReconnect);
+}
+
+function tryReconnect() {
+    if (!currentStation) return;
+
+    if (retryCount >= maxRetries) {
+        document.getElementById("status").innerText = "Connection lost 😢";
+        return;
+    }
+
+    retryCount++;
+
+    document.getElementById("status").innerText =
+        "Reconnecting... (" + retryCount + "/" + maxRetries + ")";
+
+    // 🔥 SMART SWITCH AFTER 5 FAILS
+    if (retryCount === 5) {
+        document.getElementById("status").innerText =
+            "Switching station due to connection issues...";
+        autoSelect();
+        return;
+    }
+
+    setTimeout(() => {
+        const player = document.getElementById("player");
+        player.src = stations[currentStation];
+        player.play().catch(() => {});
+    }, 3000);
+}
+
+// ⏰ AUTO SELECT
+function autoSelect() {
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+
+    const station = getNewsStation(hour, minute);
+
+    document.getElementById("status").innerText =
+        "Auto-selected: " + station + " (" + hour + ":" + minute + ")";
+
+    playStation(station);
+}
+
+// 🚀 INIT
+window.onload = () => {
+    setupAutoReconnect();
+    autoSelect();
+};
+
+// 🔄 CHECK EVERY 5 MINUTES
+setInterval(autoSelect, 300000);
+</script>
+
+</body>
+</html>
