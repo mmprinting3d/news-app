@@ -1,267 +1,153 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Radio, Volume2, ShieldAlert, Newspaper, Clock, Mic2, Loader2 } from 'lucide-react';
+import { Radio, Square, Play, ShieldAlert, Wifi, Info } from 'lucide-react';
 
-// STATIONS CONFIGURATION
-const STATIONS = [
-  { 
-    id: 'rb', 
-    name: "כאן רשת ב'", 
-    url: "https://kanliveic01.mediacp.com/reshetbet/index.m3u8", 
-    color: "bg-emerald-900", 
-    key: "1", 
-    desc: "חדשות כל חצי שעה",
-    schedule: [
-      { start: 6, end: 8, show: "הבוקר עם אריה גולן" },
-      { start: 8, end: 10, show: "קלמן ליברמן" },
-      { start: 10, end: 12, show: "סדר יום" },
-      { start: 17, end: 19, show: "חדשות הערב" },
-      { start: 19, end: 24, show: "תוכניות אקטואליה" }
-    ]
-  },
-  { 
-    id: 'c14', 
-    name: "עכשיו 14", 
-    url: "https://ch14-live.mediacp.com/ch14/index.m3u8", 
-    color: "bg-slate-900", 
-    key: "2", 
-    desc: "חדשות ופטריוטים",
-    schedule: [
-      { start: 7, end: 9, show: "ישראל הבוקר" },
-      { start: 17, end: 18, show: "הדוח של אראל" },
-      { start: 19, end: 21, show: "מהדורה מרכזית" },
-      { start: 21, end: 23, show: "הפטריוטים" }
-    ]
-  },
-  { 
-    id: 'galei', 
-    name: "גלי ישראל", 
-    url: "https://glisrael.live-stream.co.il/galei-yisrael", 
-    color: "bg-blue-900", 
-    key: "3", 
-    desc: "אקטואליה ימנית",
-    schedule: [
-      { start: 7, end: 9, show: "פתחי וזמרי בעם" },
-      { start: 10, end: 12, show: "נועם פתחי ושי גולדשטיין" }
-    ]
-  },
-  { 
-    id: 'a7', 
-    name: "ערוץ 7", 
-    url: "https://a7.live-stream.co.il/a7_aac", 
-    color: "bg-orange-900", 
-    key: "4", 
-    desc: "חדשות המגזר",
-    schedule: [] 
-  }
-];
-
-export default function App() {
-  const [currentStation, setCurrentStation] = useState(STATIONS[0]);
+const App = () => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentStation, setCurrentStation] = useState(null);
+  const [status, setStatus] = useState('בחר תחנה'); 
   const [isLoading, setIsLoading] = useState(false);
-  const [volume, setVolume] = useState(0.8);
-  const [isAutoMode, setIsAutoMode] = useState(true);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [currentShow, setCurrentShow] = useState("טוען לוח שידורים...");
-  
+  const [error, setError] = useState(false);
   const audioRef = useRef(null);
-  const hlsRef = useRef(null);
 
-  // Load HLS.js library dynamically
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = "https://cdn.jsdelivr.net/npm/hls.js@latest";
-    script.async = true;
-    document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
-  }, []);
+  const stations = [
+    { id: 1, name: 'גלי ישראל', url: 'https://glv.stream-line.co/gly8s', freq: '94.0 FM' },
+    { id: 2, name: 'ערוץ 14', url: 'https://mid-live.stream-line.co/c14_radio', freq: 'רדיו 14' },
+    { id: 3, name: '103FM', url: 'https://103fm.stream-line.co/103fm_mp3', freq: 'רדיו ללא הפסקה' },
+    { id: 4, name: 'רשת ב', url: 'https://kanliveic.media.kan.org.il/kan/bet/icecast.audio', freq: 'כאן חדשות' }
+  ];
 
-  const getShowName = (station, hour) => {
-    if (!station.schedule || station.schedule.length === 0) return station.desc;
-    const show = station.schedule.find(s => hour >= s.start && hour < s.end);
-    return show ? show.show : "שידורי מוזיקה ואקטואליה";
-  };
-
-  // Clock & Auto-Logic
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(now);
-      const hour = now.getHours();
-      setCurrentShow(getShowName(currentStation, hour));
-
-      if (isAutoMode) {
-        let autoStation = STATIONS[0];
-        if (hour >= 6 && hour < 11) autoStation = STATIONS[0];
-        else if (hour >= 11 && hour < 17) autoStation = STATIONS[2];
-        else if (hour >= 17 && hour < 23) autoStation = STATIONS[1];
-        else autoStation = STATIONS[0];
-
-        if (autoStation.id !== currentStation.id) {
-          updateStation(autoStation, true);
-        }
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isAutoMode, currentStation]);
-
-  // Keypad Listener
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      const key = event.key;
-      const target = STATIONS.find(s => s.key === key);
-      if (target) {
-        setIsAutoMode(false);
-        updateStation(target, false);
-      } else if (key === '5' || key === 'Enter') {
-        togglePlay();
-      } else if (key === 'ArrowUp' || key === '8') {
-        adjustVolume(0.1);
-      } else if (key === 'ArrowDown' || key === '0') {
-        adjustVolume(-0.1);
-      } else if (key === '7') {
-        setIsAutoMode(true);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, currentStation, isAutoMode, isLoading]);
-
-  const updateStation = (station, fromAuto) => {
-    const wasPlaying = isPlaying;
-    setCurrentStation(station);
-    setIsLoading(true);
-
-    if (audioRef.current) {
-      // Destroy old HLS instance if exists
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-      }
-
-      // Check if HLS.js is supported
-      if (window.Hls && window.Hls.isSupported()) {
-        const hls = new window.Hls();
-        hls.loadSource(station.url);
-        hls.attachMedia(audioRef.current);
-        hlsRef.current = hls;
-        hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-          setIsLoading(false);
-          if (wasPlaying || fromAuto) {
-            audioRef.current.play().catch(() => setIsPlaying(false));
-            setIsPlaying(true);
-          }
-        });
-      } 
-      // Fallback for Safari/Native HLS support
-      else if (audioRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-        audioRef.current.src = station.url;
-        audioRef.current.addEventListener('loadedmetadata', () => {
-          setIsLoading(false);
-          if (wasPlaying || fromAuto) audioRef.current.play();
-        });
-      }
+  const playStation = (station) => {
+    if (currentStation?.id === station.id && isPlaying) {
+      stopRadio();
+      return;
     }
-  };
 
-  const togglePlay = () => {
-    if (!audioRef.current || isLoading) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      setIsLoading(true);
+    setError(false);
+    setIsLoading(true);
+    setCurrentStation(station);
+    setStatus('מתחבר...'); 
+    
+    if (audioRef.current) {
+      audioRef.current.src = station.url;
       audioRef.current.play()
         .then(() => {
           setIsPlaying(true);
           setIsLoading(false);
+          setStatus('מנגן עכשיו');
         })
-        .catch(() => {
-          setIsPlaying(false);
+        .catch((err) => {
+          setError(true);
           setIsLoading(false);
+          setStatus('שגיאת חיבור');
+          setIsPlaying(false);
         });
     }
   };
 
-  const adjustVolume = (delta) => {
-    setVolume(prev => {
-      const newVol = Math.max(0, Math.min(1, prev + delta));
-      if (audioRef.current) audioRef.current.volume = newVol;
-      return newVol;
-    });
+  const stopRadio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    }
+    setIsPlaying(false);
+    setIsLoading(false);
+    setCurrentStation(null);
+    setStatus('בחר תחנה');
+    setError(false);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === '0') stopRadio();
+      const station = stations.find(s => s.id.toString() === e.key);
+      if (station) playStation(station);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentStation, isPlaying]);
+
   return (
-    <div className="flex flex-col h-screen bg-black text-white p-3 font-sans overflow-hidden select-none" dir="rtl">
+    <div className="min-h-screen bg-stone-950 text-white flex flex-col items-center p-4 font-sans select-none" dir="rtl">
       
-      {/* Status Bar */}
-      <div className="flex justify-between items-center mb-2 px-1">
-        <div className="flex items-center gap-1.5">
-          <Clock size={12} className={isAutoMode ? "text-blue-400" : "text-zinc-500"} />
-          <span className={`text-[9px] font-bold ${isAutoMode ? "text-blue-400" : "text-zinc-500"}`}>
-            {isAutoMode ? "אוטומטי פעיל" : "בחירה ידנית"}
-          </span>
+      {/* Visual Indicator Top */}
+      <div className="w-full max-w-md flex flex-col items-center mt-6 mb-8">
+        <div className={`relative w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-500 shadow-2xl ${
+          error ? 'border-red-600 bg-red-900/20 shadow-red-900/40' : 
+          isPlaying ? 'border-emerald-500 bg-emerald-900/20 shadow-emerald-900/40' : 
+          isLoading ? 'border-yellow-500 bg-yellow-900/20 animate-pulse' :
+          'border-stone-800 bg-stone-900 shadow-black'
+        }`}>
+          {error ? <ShieldAlert size={48} className="text-red-500" /> : 
+           isPlaying ? <Wifi size={48} className="text-emerald-400" /> : 
+           <Radio size={48} className="text-stone-600" />}
         </div>
-        <div className="text-[10px] font-mono opacity-60">
-          {currentTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+        <h1 className="text-lg font-bold mt-4 text-stone-500 tracking-widest uppercase">Israel Radio App</h1>
+      </div>
+
+      {/* Main Status Display */}
+      <div className={`w-full max-w-xs p-5 rounded-3xl border-2 mb-8 text-center transition-all duration-300 ${
+        error ? 'border-red-900 bg-red-950/30' : 
+        isPlaying ? 'border-emerald-900 bg-emerald-950/30' : 
+        'border-stone-800 bg-stone-900'
+      }`}>
+        <h2 className={`text-3xl font-black mb-1 ${
+          error ? 'text-red-500' : isPlaying ? 'text-emerald-400' : 'text-stone-200'
+        }`}>
+          {status}
+        </h2>
+        <div className="text-stone-400 text-sm flex items-center justify-center gap-2">
+          {currentStation ? (
+            <span className="font-bold text-stone-300">{currentStation.name}</span>
+          ) : (
+            <span className="flex items-center gap-1 opacity-50"><Info size={14}/> בחר מספר 1-4</span>
+          )}
         </div>
       </div>
 
-      {/* Main Display Unit */}
-      <div className={`flex-grow rounded-3xl ${currentStation.color} p-4 flex flex-col items-center justify-center shadow-xl transition-colors duration-700 border-2 ${isPlaying ? 'border-white/40' : 'border-transparent'}`}>
-        
-        <div className="mb-1 opacity-40">
-            {currentStation.id === 'rb' ? <Newspaper size={32} /> : <Radio size={32} />}
-        </div>
-        
-        <h1 className="text-2xl font-black text-center mb-1 leading-tight">
-            {currentStation.name}
-        </h1>
-        
-        <div className="bg-black/30 px-3 py-1 rounded-full flex items-center gap-2 mb-6">
-            <Mic2 size={12} className={isPlaying ? "text-red-400 animate-pulse" : "text-zinc-500"} />
-            <span className="text-xs font-bold text-white tracking-tight">{currentShow}</span>
-        </div>
-
-        <button 
-            onClick={togglePlay}
-            disabled={isLoading}
-            className={`w-20 h-20 rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all ${isLoading ? 'bg-zinc-700' : 'bg-white text-black'}`}
-        >
-            {isLoading ? (
-              <Loader2 size={36} className="animate-spin text-white" />
-            ) : isPlaying ? (
-              <Pause size={36} fill="currentColor" />
-            ) : (
-              <Play size={36} fill="currentColor" className="mr-[-4px]" />
-            )}
-        </button>
-
-        <div className="w-full max-w-[140px] mt-6 flex flex-col gap-1.5">
-            <div className="w-full h-1 bg-black/40 rounded-full overflow-hidden">
-                <div className="bg-white h-full transition-all duration-300" style={{ width: `${volume * 100}%` }}></div>
+      {/* Grid of Stations */}
+      <div className="w-full max-w-xs space-y-3">
+        {stations.map((station) => (
+          <button
+            key={station.id}
+            onClick={() => playStation(station)}
+            className={`w-full flex items-center justify-between p-5 rounded-2xl font-bold text-xl transition-all active:scale-95 border-b-4 ${
+              currentStation?.id === station.id && isPlaying
+                ? 'bg-emerald-600 border-emerald-800 text-white translate-y-1'
+                : 'bg-stone-800 border-stone-900 text-stone-200 hover:bg-stone-700'
+            }`}
+          >
+            <div className="flex flex-col items-start">
+              <span className="leading-tight">{station.name}</span>
+              <span className="text-xs font-normal opacity-60">{station.freq}</span>
             </div>
-            <div className="flex justify-between text-[8px] opacity-50 font-bold">
-                <span>ווליום</span>
-                <span>{Math.round(volume * 100)}%</span>
+            <div className="flex items-center gap-4">
+               <span className="text-sm bg-black/40 px-3 py-1 rounded-lg border border-white/10">{station.id}</span>
+               {currentStation?.id === station.id && isPlaying ? 
+                <Square size={22} fill="white" className="animate-pulse" /> : 
+                <Play size={22} fill="currentColor" />}
             </div>
-        </div>
-      </div>
-
-      {/* T9 Shortcut Labels */}
-      <div className="grid grid-cols-2 gap-2 mt-3">
-        {STATIONS.map((s) => (
-          <div key={s.id} className={`p-2 rounded-xl flex items-center gap-2 border ${currentStation.id === s.id ? 'bg-white text-black border-white' : 'bg-zinc-900 border-zinc-800 opacity-60'}`}>
-            <span className="text-[9px] w-4 h-4 flex items-center justify-center bg-blue-600 text-white rounded font-bold">{s.key}</span>
-            <span className="text-[11px] font-bold truncate">{s.name}</span>
-          </div>
+          </button>
         ))}
+
+        {/* Stop Button */}
+        <button
+          onClick={stopRadio}
+          className="w-full mt-4 flex items-center justify-center gap-4 p-5 rounded-2xl font-bold text-xl bg-red-950/40 text-red-400 border-2 border-red-900/50 active:scale-95 transition-all"
+        >
+          <span>כיבוי</span>
+          <span className="bg-red-900/30 px-3 py-1 rounded-lg border border-red-700/50 text-sm">0</span>
+        </button>
       </div>
 
-      <div className="text-center text-[8px] mt-2 opacity-30">
-        לחץ <span className="text-blue-400 font-bold">7</span> לאוטומטי • <span className="text-blue-400 font-bold">5</span> נגן • <span className="text-blue-400 font-bold">8/0</span> ווליום
+      {/* Device Info Footer */}
+      <div className="mt-auto py-6 text-stone-700 text-[10px] text-center uppercase tracking-tighter">
+        Optimized for Duoqin F22 Pro Keypad
       </div>
 
       <audio ref={audioRef} />
     </div>
   );
-}
+};
+
+export default App;
