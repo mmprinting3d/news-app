@@ -47,26 +47,26 @@ audio {
 <p id="status">Checking schedule...</p>
 
 <button onclick="playStation('galei')">Galei Israel</button>
-<button onclick="playStation('ch14')">Channel 14 Radio</button>
+<button onclick="playStation('ch14')">C14</button>
 <button onclick="playStation('fm103')">103FM</button>
-<button onclick="playStation('reshet')">Reshet Bet</button>
+<button onclick="playStation('reshet')">Reshet B</button>
 
 <audio id="player" controls autoplay></audio>
 
 <script>
-// 🔊 STREAM URLS (REPLACE THESE)
+// 🔊 STREAMS
 const stations = {
-    galei: "STREAM_URL_1",
-    ch14: "STREAM_URL_2",
-    fm103: "STREAM_URL_3",
-    reshet: "STREAM_URL_4"
+    galei: "https://galei-israel.streamgates.net/live",
+    ch14: "https://radio.streamgates.net/channel14",
+    fm103: "https://103fm.streamgates.net/103fm",
+    reshet: "https://kanliveicy.media.kan.org.il/icy/kanbet_mp3"
 };
 
 let currentStation = null;
 let retryCount = 0;
 const maxRetries = 10;
 
-// 🕒 NEWS SCHEDULE
+// 🕒 SCHEDULE
 function getNewsStation(hour, minute) {
     if (minute < 10) return "reshet";
     if (hour >= 7 && hour <= 9) return "galei";
@@ -75,7 +75,7 @@ function getNewsStation(hour, minute) {
     return "reshet";
 }
 
-// ▶️ PLAY STATION
+// ▶️ PLAY
 function playStation(key) {
     currentStation = key;
     retryCount = 0;
@@ -87,18 +87,24 @@ function playStation(key) {
     updateUI(key);
 }
 
-// 🎨 UI UPDATE
+// 🎨 UI
 function updateUI(key) {
     document.querySelectorAll("button").forEach(btn => btn.classList.remove("active"));
 
-    const buttons = document.querySelectorAll("button");
-    buttons.forEach(btn => {
-        if (btn.innerText.toLowerCase().includes(key)) {
+    const map = {
+        galei: "Galei Israel",
+        ch14: "C14",
+        fm103: "103FM",
+        reshet: "Reshet B"
+    };
+
+    document.querySelectorAll("button").forEach(btn => {
+        if (btn.innerText === map[key]) {
             btn.classList.add("active");
         }
     });
 
-    document.getElementById("status").innerText = "Playing: " + key;
+    document.getElementById("status").innerText = "Playing: " + map[key];
 }
 
 // 🔁 AUTO RECONNECT
@@ -123,10 +129,9 @@ function tryReconnect() {
     document.getElementById("status").innerText =
         "Reconnecting... (" + retryCount + "/" + maxRetries + ")";
 
-    // 🔥 SMART SWITCH AFTER 5 FAILS
     if (retryCount === 5) {
         document.getElementById("status").innerText =
-            "Switching station due to connection issues...";
+            "Switching station...";
         autoSelect();
         return;
     }
@@ -146,8 +151,15 @@ function autoSelect() {
 
     const station = getNewsStation(hour, minute);
 
+    const map = {
+        galei: "Galei Israel",
+        ch14: "C14",
+        fm103: "103FM",
+        reshet: "Reshet B"
+    };
+
     document.getElementById("status").innerText =
-        "Auto-selected: " + station + " (" + hour + ":" + minute + ")";
+        "Auto-selected: " + map[station] + " (" + hour + ":" + minute + ")";
 
     playStation(station);
 }
@@ -158,7 +170,6 @@ window.onload = () => {
     autoSelect();
 };
 
-// 🔄 CHECK EVERY 5 MINUTES
 setInterval(autoSelect, 300000);
 </script>
 
